@@ -34,11 +34,15 @@ struct ContentView: View {
     @State private var isZoomed = false
     @State private var size: CGSize = .zero
     
-    var frame: CGSize {
+    @State private var plateOpacity: Double = 1
+    @State private var showFlag: Bool = false
+    @State private var now: Date = Date.now
+    
+    private var frame: CGSize {
         !isZoomed ? size : CGSize(width: 250, height: 400)
     }
     
-    var alignment: Alignment {
+    private var alignment: Alignment {
         !isZoomed ? .bottomTrailing : .center
     }
     
@@ -48,15 +52,54 @@ struct ContentView: View {
     private let button: String = "2"
     private let plate: String = "3"
     
-    @State private var plateOpacity: Double = 1
-    
     var body: some View {
         ZStack(alignment: .top) {
             ZStack(alignment: .topLeading) {
+                if showFlag {
+                    TimelineView(.animation) { tl in
+                        let start = now.distance(to: tl.date)
+                        Image("us_flag")
+                            .resizable()
+                            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                            .padding(20)
+                            .background(.white.opacity(plateOpacity))
+                            .drawingGroup()
+                            .frame(width: frame.width, height: frame.height)
+                            .visualEffect { content, geometryProxy in
+                                content
+                                    .distortionEffect(
+                                        ShaderLibrary.relativeWave(.float2(geometryProxy.size),
+                                                                   .float(start),
+                                                                   .float(5),
+                                                                   .float(20),
+                                                                   .float(5)), maxSampleOffset: .zero)
+                                    .opacity(isZoomed ? 1 : 0)
+                            }
+                            .onTapGesture {
+                                withAnimation {
+                                    showFlag.toggle()
+                                }
+                            }
+                    }
+                    .matchedGeometryEffect(id: plate, in: animation)
+                    .transition(.scale)
+                } else {
                     RoundedRectangle(cornerRadius: cornerRadius)
-                    .foregroundStyle(.blue.opacity(plateOpacity))
-                    .frame(width: frame.width, height: frame.height)
-                if isZoomed {
+                        .foregroundStyle(.blue.opacity(plateOpacity))
+                        .frame(width: frame.width, height: frame.height)
+                        .matchedGeometryEffect(id: plate, in: animation)
+                        .onChange(of: isZoomed) { oldValue, newValue in
+                            if newValue {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                    withAnimation {
+                                        showFlag.toggle()
+                                    }
+                                }
+                            }
+                        }
+                        .transition(.scale)
+                }
+                if isZoomed && !showFlag {
                     Button{
                         withAnimation {
                             isZoomed.toggle()
@@ -65,7 +108,7 @@ struct ContentView: View {
                         Label("Back", systemImage: "arrowshape.backward.fill")
                             .foregroundStyle(.white)
                             .fixedSize(horizontal: true, vertical: true)
-                            .padding()
+                            .padding(showFlag ? 50 : 20)
                             .matchedGeometryEffect(id: buttonText, in: animation)
                     }
                     .matchedGeometryEffect(id: button, in: animation)
@@ -75,6 +118,7 @@ struct ContentView: View {
             
             if !isZoomed {
                 Button {
+                    now = Date.now
                     withAnimation {
                         isZoomed.toggle()
                     }

@@ -8,7 +8,11 @@
 #include <metal_stdlib>
 using namespace metal;
 
-[[stitchable]] float2 flagWave(float2 position, float time, float2 s) {
-    position.y = sin(time * 5 + position.y / 20) * 5;
+[[ stitchable ]] float2 relativeWave(float2 position, float2 size, float time, float speed, float smoothing, float strength) {
+
+    half2 uv = half2(position / size);
+    half offset = sin(time * speed + position.y / smoothing);
+    position.x += offset * uv.y * strength;
+
     return position;
-}
+ }
